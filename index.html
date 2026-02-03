@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Asad Ali — GitHub Repositories</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f5f7fb;
+            --card: #ffffff;
+            --text: #0f172a;
+            --muted: #64748b;
+            --accent: #2563eb;
+            --border: #e2e8f0;
+            --shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 32px 20px 60px;
+            background: var(--bg);
+            color: var(--text);
+        }
+        header {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 28px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 32px;
+            margin: 0;
+        }
+        .subtitle {
+            color: var(--muted);
+            margin: 0;
+        }
+        .meta {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 8px;
+        }
+        .pill {
+            background: #e0e7ff;
+            color: #1e3a8a;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .search {
+            width: 100%;
+            max-width: 520px;
+            margin: 18px auto 0;
+            display: flex;
+            gap: 10px;
+        }
+        .search input {
+            flex: 1;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            outline: none;
+            font-size: 14px;
+            background: #fff;
+        }
+        .search button {
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--accent);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        #repos {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+        }
+        .repo {
+            background: var(--card);
+            padding: 16px;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 150px;
+        }
+        .repo a {
+            text-decoration: none;
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 18px;
+        }
+        .repo p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .repo .stats {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: auto;
+        }
+        .status {
+            text-align: center;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>🚀 Asad Ali’s GitHub Projects</h1>
+    <p class="subtitle">Latest public repositories, sorted by recent updates.</p>
+    <div class="meta">
+        <span class="pill">@asadali2004</span>
+        <span class="pill">Open Source</span>
+        <span class="pill">GitHub</span>
+    </div>
+    <div class="search">
+        <input id="search" type="text" placeholder="Search repositories..." />
+        <button id="clear" type="button">Clear</button>
+    </div>
+</header>
+
+<div id="repos"></div>
+<p id="status" class="status"></p>
+
+<script>
+const username = "asadali2004";
+const container = document.getElementById("repos");
+const statusEl = document.getElementById("status");
+const searchInput = document.getElementById("search");
+const clearBtn = document.getElementById("clear");
+
+let allRepos = [];
+
+const renderRepos = (repos) => {
+    container.innerHTML = "";
+
+    if (!repos.length) {
+        statusEl.textContent = "No repositories found.";
+        return;
+    }
+
+    statusEl.textContent = "";
+
+    repos.forEach(repo => {
+        const div = document.createElement("div");
+        div.className = "repo";
+
+        const topics = (repo.topics || []).slice(0, 3).map(topic => `#${topic}`).join(" ");
+
+        div.innerHTML = `
+            <a href="${repo.html_url}" target="_blank" rel="noopener">${repo.name}</a>
+            <p>${repo.description ?? "No description available."}</p>
+            ${topics ? `<p>${topics}</p>` : ""}
+            <div class="stats">
+                <span>★ ${repo.stargazers_count}</span>
+                <span>⑂ ${repo.forks_count}</span>
+                <span>Updated ${new Date(repo.updated_at).toLocaleDateString()}</span>
+            </div>
+        `;
+
+        container.appendChild(div);
+    });
+};
+
+const applyFilter = () => {
+    const query = searchInput.value.trim().toLowerCase();
+    if (!query) {
+        renderRepos(allRepos);
+        return;
+    }
+
+    const filtered = allRepos.filter(repo =>
+        repo.name.toLowerCase().includes(query) ||
+        (repo.description && repo.description.toLowerCase().includes(query))
+    );
+
+    renderRepos(filtered);
+};
+
+statusEl.textContent = "Loading repositories...";
+
+fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=100`)
+    .then(res => res.json())
+    .then(data => {
+        allRepos = data
+            .filter(repo => !repo.fork)
+            .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+
+        renderRepos(allRepos);
+    })
+    .catch(() => {
+        statusEl.textContent = "Unable to load repositories right now.";
+    });
+
+searchInput.addEventListener("input", applyFilter);
+clearBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    applyFilter();
+});
+</script>
+
+</body>
+</html>
